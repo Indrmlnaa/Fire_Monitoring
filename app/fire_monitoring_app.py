@@ -488,8 +488,7 @@ st.dataframe(
             "PRIORITY",
             "DETECTION_COUNT",
             "DETECTED_BY",
-            "MAX_FRP_MW",
-            "DISTANCE_BOUNDARY_KM"
+            "MAX_FRP_MW"
         ]
     ],
     use_container_width=True,
@@ -524,10 +523,7 @@ if event_ids:
     with c2:
         st.metric("Latitude", detail["LATITUDE"])
         st.metric("Longitude", detail["LONGITUDE"])
-        st.metric(
-            "Distance Boundary",
-            f"{detail['DISTANCE_BOUNDARY_KM']} km"
-        )
+        
 
     with c3:
         st.write("**Event Date**")
@@ -557,7 +553,6 @@ st.dataframe(
             "DETECTION_COUNT",
             "DETECTED_BY",
             "MAX_FRP_MW",
-            "DISTANCE_BOUNDARY_KM",
             "PRIORITY"
         ]
     ],
