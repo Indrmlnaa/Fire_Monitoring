@@ -11,11 +11,11 @@ from streamlit_folium import st_folium
 # CONFIG
 # ============================================================
 
-SPATIAL_FILE = r"data\v2\processed\OKI_NASA_FIRMS_spatial_analysis.csv"
+SPATIAL_FILE = "data/v2/processed/OKI_NASA_FIRMS_spatial_analysis.csv"
 
-EVENT_FILE = r"data\v2\processed\OKI_NASA_FIRMS_fire_events.csv"
+EVENT_FILE = "data/v2/processed/OKI_NASA_FIRMS_fire_events.csv"
 
-BOUNDARY_FILE = r"boundaries\OKI\OKI.shp"
+BOUNDARY_FILE = "boundaries/OKI/OKI.shp"
 
 
 st.set_page_config(
