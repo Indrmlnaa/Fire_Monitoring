@@ -1,0 +1,30 @@
+name: Test Rainfall
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          pip install requests pandas
+
+      - name: Run rainfall test
+        run: |
+          python scripts/get_rainfall.py
+
+      - name: Check output
+        run: |
+          ls -lh data/v2/processed/
+          head -10 data/v2/processed/OKI_NASA_POWER_rainfall.csv
