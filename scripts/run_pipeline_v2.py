@@ -13,7 +13,7 @@ from sklearn.cluster import DBSCAN
 # CONFIG — CUKUP UBAH BAGIAN INI
 # ============================================================
 
-MAP_KEY = os.environ["0e32951e5111df9052f4525862db9134"]
+MAP_KEY = os.environ["FIRMS_MAP_KEY"]
 
 AREA_NAME = "OKI"
 
