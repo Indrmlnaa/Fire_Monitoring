@@ -86,7 +86,35 @@ if selected_sensor != "All":
 # -------------------- MAP --------------------
 st.subheader("🗺️ Fire Monitoring Map")
 center = [events["LATITUDE"].mean(), events["LONGITUDE"].mean()] if not events.empty else [-3.4, 105.2]
-m = folium.Map(location=center, zoom_start=9, tiles="CartoDB positron")
+
+# Base map: Light / Satellite / Terrain
+m = folium.Map(location=center, zoom_start=9, tiles=None)
+
+folium.TileLayer(
+    tiles="CartoDB positron",
+    name="🗺️ Light Map",
+    overlay=False,
+    control=True,
+    show=True,
+).add_to(m)
+
+folium.TileLayer(
+    tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    attr="Esri World Imagery",
+    name="🛰️ Satellite",
+    overlay=False,
+    control=True,
+    show=False,
+).add_to(m)
+
+folium.TileLayer(
+    tiles="https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+    attr="OpenTopoMap",
+    name="⛰️ Terrain",
+    overlay=False,
+    control=True,
+    show=False,
+).add_to(m)
 
 folium.GeoJson(
     oki.to_json(), name="OKI Boundary",
