@@ -1,77 +1,198 @@
-name: Update NASA FIRMS
+name: Fire Monitoring Pipeline
 
 on:
-  schedule:
-    - cron: "0 1 * * *"
   workflow_dispatch:
+  schedule:
+    # Run every day at 01:00 UTC = 08:00 WIB
+    - cron: "0 1 * * *"
+
+permissions:
+  contents: write
 
 jobs:
-  update:
+  fire-monitoring:
     runs-on: ubuntu-latest
 
     steps:
+
+      # ============================================================
+      # 1. SETUP JOB
+      # ============================================================
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # ============================================================
+      # 2. SETUP PYTHON
+      # ============================================================
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: "3.11"
 
+      # ============================================================
+      # 3. TEST NASA FIRMS CONNECTION
+      # ============================================================
       - name: Test NASA FIRMS connection
         run: |
-          curl -I \
-              --connect-timeout 30 \
-              --max-time 60 \
-              --retry 3 \
-              --retry-delay 5 \
-              https://firms.modaps.eosdis.nasa.gov
+          echo "Testing NASA FIRMS connection..."
 
+          curl -I \
+            --connect-timeout 15 \
+            --max-time 30 \
+            https://firms.modaps.eosdis.nasa.gov || true
+
+          echo "Connection test completed."
+
+      # ============================================================
+      # 4. INSTALL DEPENDENCIES
+      # ============================================================
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          python -m pip install --upgrade pip
 
+          pip install \
+            pandas \
+            requests \
+            geopandas \
+            shapely \
+            pyproj \
+            fiona
+
+      # ============================================================
+      # 5. RUN FIRE MONITORING PIPELINE
+      # ============================================================
       - name: Run pipeline
         env:
-          FIRMS_MAP_KEY: ${{ secrets.FIRMS_MAP_KEY }}
+          MAP_KEY: ${{ secrets.MAP_KEY }}
         run: |
           python scripts/run_pipeline_v2.py
 
+      # ============================================================
+      # 6. CHECK FIRE MONITORING OUTPUT
+      # ============================================================
+      - name: Check fire monitoring output
+        run: |
+          echo "============================================"
+          echo "FIRE MONITORING OUTPUT"
+          echo "============================================"
+
+          ls -lh data/v2/processed/
+
+          echo ""
+          echo "Fire events:"
+          test -f data/v2/processed/OKI_NASA_FIRMS_fire_events.csv
+          wc -l data/v2/processed/OKI_NASA_FIRMS_fire_events.csv
+
+          echo ""
+          echo "Spatial analysis:"
+          test -f data/v2/processed/OKI_NASA_FIRMS_spatial_analysis.csv
+          wc -l data/v2/processed/OKI_NASA_FIRMS_spatial_analysis.csv
+
+      # ============================================================
+      # 7. ADD RAINFALL TO FIRE EVENTS
+      # ============================================================
       - name: Add rainfall to fire events
         run: |
           python scripts/get_rainfall_events.py
 
+      # ============================================================
+      # 8. VERIFY RAINFALL OUTPUT
+      # ============================================================
+      - name: Verify rainfall output
+        run: |
+          echo "============================================"
+          echo "RAINFALL OUTPUT"
+          echo "============================================"
+
+          FILE="data/v2/processed/OKI_fire_events_rainfall.csv"
+
+          if [ ! -f "$FILE" ]; then
+            echo "ERROR: Rainfall file was not created!"
+            exit 1
+          fi
+
+          echo ""
+          echo "File:"
+          ls -lh "$FILE"
+
+          echo ""
+          echo "Line count:"
+          wc -l "$FILE"
+
+          echo ""
+          echo "Preview:"
+          head -5 "$FILE"
+
+          echo ""
+          echo "Last records:"
+          tail -5 "$FILE"
+
+          echo ""
+          echo "Git status:"
+          git status --short
+
+          echo ""
+          echo "Check if ignored:"
+          git check-ignore -v "$FILE" || true
+
+      # ============================================================
+      # 9. FORCE ADD GENERATED DATA
+      # ============================================================
+      - name: Stage updated data
+        run: |
+          echo "============================================"
+          echo "STAGING UPDATED DATA"
+          echo "============================================"
+
+          git add -f data/v2/processed/OKI_NASA_FIRMS_fire_events.csv
+          git add -f data/v2/processed/OKI_NASA_FIRMS_spatial_analysis.csv
+          git add -f data/v2/processed/OKI_fire_events_rainfall.csv
+
+          echo ""
+          echo "Staged changes:"
+          git status --short
+
+      # ============================================================
+      # 10. COMMIT UPDATED DATA
+      # ============================================================
       - name: Commit updated data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          git add data/v2/
-
           if git diff --cached --quiet; then
             echo "No data changes."
-            exit 0
+          else
+            git commit -m "Update fire monitoring data"
+            echo "Data committed successfully."
           fi
 
-          git commit -m "Update NASA FIRMS data"
+      # ============================================================
+      # 11. PUSH TO GITHUB
+      # ============================================================
+      - name: Push updated data
+        run: |
+          git push origin HEAD:${GITHUB_REF_NAME}
 
-          for i in 1 2 3 4 5
-          do
-            echo "Push attempt $i"
+      # ============================================================
+      # 12. FINAL CHECK
+      # ============================================================
+      - name: Final status
+        run: |
+          echo "============================================"
+          echo "PIPELINE COMPLETED"
+          echo "============================================"
 
-            git fetch origin main
-            git rebase origin/main
+          echo ""
+          echo "Repository:"
+          git remote -v
 
-            if git push origin HEAD:main; then
-              echo "Push successful."
-              exit 0
-            fi
+          echo ""
+          echo "Current commit:"
+          git log -1 --oneline
 
-            echo "Push failed, retrying..."
-            sleep 5
-          done
-
-          echo "Push failed after 5 attempts."
-          exit 1
+          echo ""
+          echo "Generated files:"
+          ls -lh data/v2/processed/
