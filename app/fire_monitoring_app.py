@@ -35,12 +35,12 @@ for col in ["RAINFALL_1D_MM", "RAINFALL_7D_MM", "RAINFALL_30D_MM"]:
 oki = gpd.read_file(BOUNDARY_FILE).to_crs("EPSG:4326")
 
 # -------------------- TITLE --------------------
-st.title("🔥 OKI Fire & Environment Monitoring System")
+st.title("Hotspot Monitoring & Early Warning System")
 dates_dt = pd.to_datetime(events["EVENT_DATE"], errors="coerce").dropna()
 period = "Current monitoring period"
 if not dates_dt.empty:
     period = f"{dates_dt.min():%d %b %Y} – {dates_dt.max():%d %b %Y}"
-st.caption(f"NASA FIRMS Satellite Fire Monitoring | Ogan Komering Ilir | {period}")
+st.caption(f"Satellite-Based Hotspot Detection & Spatial Analysis | {period}")
 
 # -------------------- KPI --------------------
 total_detections = len(detections)
