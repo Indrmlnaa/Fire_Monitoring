@@ -556,7 +556,7 @@ if event_ids:
         )
     
     else:
-        st.info("No fire event matches the selected filter.")
+    st.info("No fire event matches the selected filter.")
 # ============================================================
 # EVENT TABLE
 # ============================================================
