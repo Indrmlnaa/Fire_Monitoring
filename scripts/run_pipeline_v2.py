@@ -18,7 +18,6 @@ MAP_KEY = os.environ["FIRMS_MAP_KEY"]
 AREA_NAME = "OKI"
 
 BOUNDARY_FILE = "boundaries/OKI/OKI.shp"
-)
 
 from datetime import date, timedelta
 
