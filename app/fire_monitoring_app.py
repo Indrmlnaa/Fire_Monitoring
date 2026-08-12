@@ -10,7 +10,7 @@ EVENT_FILE = "data/v2/processed/OKI_NASA_FIRMS_fire_events.csv"
 RAINFALL_FILE = "data/v2/processed/OKI_fire_events_rainfall.csv"
 BOUNDARY_FILE = "boundaries/OKI/OKI.shp"
 
-st.set_page_config(page_title="OKI Fire Monitoring", page_icon="🔥", layout="wide")
+st.set_page_config(page_title="Hotspot Monitoring & Early Warning System", page_icon="🔥", layout="wide")
 
 # -------------------- LOAD DATA --------------------
 events = pd.read_csv(EVENT_FILE)
