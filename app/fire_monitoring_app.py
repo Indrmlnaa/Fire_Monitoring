@@ -343,65 +343,48 @@ event_group = folium.FeatureGroup(
 )
 
 
+
 for _, row in filtered_events.iterrows():
 
     priority = row["PRIORITY"]
 
     if priority == "HIGH":
         color = "red"
-
     elif priority == "MONITORING":
         color = "orange"
-
     else:
         color = "green"
 
-popup = f"""
-<b>{row['FIRE_EVENT_ID']}</b><br><br>
+    popup = f"""
+    <b>{row['FIRE_EVENT_ID']}</b><br><br>
+    <b>Date:</b> {row['EVENT_DATE']}<br>
+    <b>Priority:</b> {priority}<br>
+    <b>Detections:</b> {row['DETECTION_COUNT']}<br>
+    <b>Detected By:</b><br>
+    {row['DETECTED_BY']}<br><br>
+    <b>Maximum FRP:</b> {row['MAX_FRP_MW']} MW<br><br>
 
-<b>Date:</b> {row['EVENT_DATE']}<br>
-
-<b>Priority:</b> {priority}<br>
-
-<b>Detections:</b> {row['DETECTION_COUNT']}<br>
-
-<b>Detected By:</b><br>
-{row['DETECTED_BY']}<br><br>
-
-<b>Maximum FRP:</b>
-{row['MAX_FRP_MW']} MW<br><br>
-
-<b>🌧️ Rainfall Context</b><br>
-1 Day: {row['RAINFALL_1D_MM']:.2f} mm<br>
-7 Days: {row['RAINFALL_7D_MM']:.2f} mm<br>
-30 Days: {row['RAINFALL_30D_MM']:.2f} mm
-"""
-
+    <b>🌧️ Rainfall Context</b><br>
+    1 Day: {row['RAINFALL_1D_MM']:.2f} mm<br>
+    7 Days: {row['RAINFALL_7D_MM']:.2f} mm<br>
+    30 Days: {row['RAINFALL_30D_MM']:.2f} mm
+    """
 
     folium.CircleMarker(
-
         location=[
             row["LATITUDE"],
             row["LONGITUDE"]
         ],
-
         radius=8,
-
         color=color,
-
         fill=True,
-
         fill_color=color,
-
         fill_opacity=0.8,
-
         popup=folium.Popup(
             popup,
             max_width=350
         )
-
     ).add_to(event_group)
-
 
 event_group.add_to(m)
 
