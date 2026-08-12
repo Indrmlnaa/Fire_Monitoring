@@ -15,6 +15,8 @@ SPATIAL_FILE = "data/v2/processed/OKI_NASA_FIRMS_spatial_analysis.csv"
 
 EVENT_FILE = "data/v2/processed/OKI_NASA_FIRMS_fire_events.csv"
 
+RAINFALL_FILE = "data/v2/processed/OKI_fire_events_rainfall.csv"
+
 BOUNDARY_FILE = "boundaries/OKI/OKI.shp"
 
 
@@ -32,6 +34,23 @@ st.set_page_config(
 events = pd.read_csv(EVENT_FILE)
 
 detections = pd.read_csv(SPATIAL_FILE)
+
+rainfall = pd.read_csv(RAINFALL_FILE)
+
+# Merge rainfall information into fire events
+events = events.merge(
+    rainfall[
+        [
+            "FIRE_EVENT_ID",
+            "RAINFALL_1D_MM",
+            "RAINFALL_7D_MM",
+            "RAINFALL_30D_MM",
+            "RAINFALL_STATUS"
+        ]
+    ],
+    on="FIRE_EVENT_ID",
+    how="left"
+)
 
 oki = gpd.read_file(BOUNDARY_FILE)
 
@@ -337,8 +356,7 @@ for _, row in filtered_events.iterrows():
     else:
         color = "green"
 
-
-    popup = f"""
+popup = f"""
 <b>{row['FIRE_EVENT_ID']}</b><br><br>
 
 <b>Date:</b> {row['EVENT_DATE']}<br>
@@ -351,7 +369,12 @@ for _, row in filtered_events.iterrows():
 {row['DETECTED_BY']}<br><br>
 
 <b>Maximum FRP:</b>
-{row['MAX_FRP_MW']} MW
+{row['MAX_FRP_MW']} MW<br><br>
+
+<b>🌧️ Rainfall Context</b><br>
+1 Day: {row['RAINFALL_1D_MM']:.2f} mm<br>
+7 Days: {row['RAINFALL_7D_MM']:.2f} mm<br>
+30 Days: {row['RAINFALL_30D_MM']:.2f} mm
 """
 
 
@@ -526,11 +549,28 @@ if event_ids:
         
 
     with c3:
-        st.write("**Event Date**")
-        st.write(detail["EVENT_DATE"])
+    st.write("**Event Date**")
+    st.write(detail["EVENT_DATE"])
 
-        st.write("**Detected By**")
-        st.write(detail["DETECTED_BY"])
+    st.write("**Detected By**")
+    st.write(detail["DETECTED_BY"])
+
+    st.write("**🌧️ Rainfall**")
+
+    st.metric(
+        "1 Day",
+        f"{detail['RAINFALL_1D_MM']:.2f} mm"
+    )
+
+    st.metric(
+        "7 Days",
+        f"{detail['RAINFALL_7D_MM']:.2f} mm"
+    )
+
+    st.metric(
+        "30 Days",
+        f"{detail['RAINFALL_30D_MM']:.2f} mm"
+    )
 
 else:
     st.info("No fire event matches the selected filter.")
@@ -545,17 +585,20 @@ st.subheader("🔥 Fire Event Records")
 st.dataframe(
 
     filtered_events[
-        [
-            "FIRE_EVENT_ID",
-            "EVENT_DATE",
-            "LATITUDE",
-            "LONGITUDE",
-            "DETECTION_COUNT",
-            "DETECTED_BY",
-            "MAX_FRP_MW",
-            "PRIORITY"
-        ]
-    ],
+    [
+        "FIRE_EVENT_ID",
+        "EVENT_DATE",
+        "LATITUDE",
+        "LONGITUDE",
+        "DETECTION_COUNT",
+        "DETECTED_BY",
+        "MAX_FRP_MW",
+        "PRIORITY",
+        "RAINFALL_1D_MM",
+        "RAINFALL_7D_MM",
+        "RAINFALL_30D_MM"
+    ]
+],
 
     use_container_width=True,
 
