@@ -532,31 +532,31 @@ if event_ids:
         
 
     with c3:
-    st.write("**Event Date**")
-    st.write(detail["EVENT_DATE"])
-
-    st.write("**Detected By**")
-    st.write(detail["DETECTED_BY"])
-
-    st.write("**🌧️ Rainfall**")
-
-    st.metric(
-        "1 Day",
-        f"{detail['RAINFALL_1D_MM']:.2f} mm"
-    )
-
-    st.metric(
-        "7 Days",
-        f"{detail['RAINFALL_7D_MM']:.2f} mm"
-    )
-
-    st.metric(
-        "30 Days",
-        f"{detail['RAINFALL_30D_MM']:.2f} mm"
-    )
-
-else:
-    st.info("No fire event matches the selected filter.")
+        st.write("**Event Date**")
+        st.write(detail["EVENT_DATE"])
+    
+        st.write("**Detected By**")
+        st.write(detail["DETECTED_BY"])
+    
+        st.write("**🌧️ Rainfall**")
+    
+        st.metric(
+            "1 Day",
+            f"{detail['RAINFALL_1D_MM']:.2f} mm"
+        )
+    
+        st.metric(
+            "7 Days",
+            f"{detail['RAINFALL_7D_MM']:.2f} mm"
+        )
+    
+        st.metric(
+            "30 Days",
+            f"{detail['RAINFALL_30D_MM']:.2f} mm"
+        )
+    
+    else:
+        st.info("No fire event matches the selected filter.")
 # ============================================================
 # EVENT TABLE
 # ============================================================
