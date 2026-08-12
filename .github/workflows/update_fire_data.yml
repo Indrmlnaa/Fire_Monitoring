@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -33,18 +35,34 @@ jobs:
           python scripts/run_pipeline_v2.py
 
       - name: Commit updated data
-    run: |
-      git config user.name "github-actions[bot]"
-      git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-      git fetch origin main
-      git reset --hard origin/main
+          git add data/v2/
 
-      git add data/v2/
+          if git diff --cached --quiet; then
+            echo "No data changes."
+            exit 0
+          fi
 
-      if git diff --cached --quiet; then
-        echo "No data changes."
-      else
-        git commit -m "Update NASA FIRMS data"
-        git push origin HEAD:main
-      fi
+          git commit -m "Update NASA FIRMS data"
+
+          for i in 1 2 3 4 5
+          do
+            echo "Push attempt $i"
+
+            git fetch origin main
+            git rebase origin/main
+
+            if git push origin HEAD:main; then
+              echo "Push successful."
+              exit 0
+            fi
+
+            echo "Push failed, retrying..."
+            sleep 5
+          done
+
+          echo "Push failed after 5 attempts."
+          exit 1
