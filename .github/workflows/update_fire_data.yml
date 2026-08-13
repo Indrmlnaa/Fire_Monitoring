@@ -36,13 +36,16 @@ jobs:
       # ============================================================
       - name: Test NASA FIRMS connection
         run: |
-          echo "Testing NASA FIRMS connection..."
+          echo "============================================================"
+          echo "TESTING NASA FIRMS CONNECTION"
+          echo "============================================================"
 
           curl -I \
             --connect-timeout 15 \
             --max-time 30 \
             https://firms.modaps.eosdis.nasa.gov || true
 
+          echo ""
           echo "Connection test completed."
 
       # ============================================================
@@ -51,7 +54,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-      
+
           pip install \
             pandas \
             requests \
@@ -60,51 +63,103 @@ jobs:
             pyproj \
             fiona \
             scikit-learn
+
       # ============================================================
-      # 5. RUN FIRE MONITORING PIPELINE
+      # 5. TEST NASA FIRMS MAP KEY
+      # ============================================================
+      - name: Test FIRMS MAP KEY
+        env:
+          FIRMS_MAP_KEY: ${{ secrets.MAP_KEY }}
+        run: |
+          echo "============================================================"
+          echo "TESTING NASA FIRMS MAP KEY"
+          echo "============================================================"
+
+          if [ -z "$FIRMS_MAP_KEY" ]; then
+            echo "ERROR: FIRMS_MAP_KEY is empty!"
+            exit 1
+          fi
+
+          echo "MAP_KEY is present."
+          echo "MAP_KEY length: ${#FIRMS_MAP_KEY}"
+
+          echo ""
+          echo "Checking MAP_KEY status..."
+
+          curl \
+            --fail-with-body \
+            --silent \
+            --show-error \
+            --connect-timeout 15 \
+            --max-time 30 \
+            "https://firms.modaps.eosdis.nasa.gov/mapserver/mapkey_status/?MAP_KEY=${FIRMS_MAP_KEY}"
+
+          echo ""
+          echo "============================================================"
+          echo "MAP KEY TEST COMPLETED"
+          echo "============================================================"
+
+      # ============================================================
+      # 6. RUN FIRE MONITORING PIPELINE
       # ============================================================
       - name: Run pipeline
         env:
           FIRMS_MAP_KEY: ${{ secrets.MAP_KEY }}
         run: |
+          echo "============================================================"
+          echo "RUNNING FIRE MONITORING PIPELINE"
+          echo "============================================================"
+
           python scripts/run_pipeline_v2.py
 
       # ============================================================
-      # 6. CHECK FIRE MONITORING OUTPUT
+      # 7. CHECK FIRE MONITORING OUTPUT
       # ============================================================
       - name: Check fire monitoring output
         run: |
-          echo "============================================"
+          echo "============================================================"
           echo "FIRE MONITORING OUTPUT"
-          echo "============================================"
+          echo "============================================================"
 
           ls -lh data/v2/processed/
 
           echo ""
           echo "Fire events:"
-          test -f data/v2/processed/OKI_NASA_FIRMS_fire_events.csv
-          wc -l data/v2/processed/OKI_NASA_FIRMS_fire_events.csv
+
+          test -f \
+            data/v2/processed/OKI_NASA_FIRMS_fire_events.csv
+
+          wc -l \
+            data/v2/processed/OKI_NASA_FIRMS_fire_events.csv
 
           echo ""
           echo "Spatial analysis:"
-          test -f data/v2/processed/OKI_NASA_FIRMS_spatial_analysis.csv
-          wc -l data/v2/processed/OKI_NASA_FIRMS_spatial_analysis.csv
+
+          test -f \
+            data/v2/processed/OKI_NASA_FIRMS_spatial_analysis.csv
+
+          wc -l \
+            data/v2/processed/OKI_NASA_FIRMS_spatial_analysis.csv
 
       # ============================================================
-      # 7. ADD RAINFALL TO FIRE EVENTS
+      # 8. ADD RAINFALL TO FIRE EVENTS
       # ============================================================
       - name: Add rainfall to fire events
         run: |
+          echo "============================================================"
+          echo "ADDING RAINFALL DATA"
+          echo "============================================================"
+
           python scripts/get_rainfall_events.py
 
       # ============================================================
-      # 8. VERIFY RAINFALL OUTPUT
+      # 9. VERIFY RAINFALL OUTPUT
       # ============================================================
       - name: Verify rainfall output
         run: |
-          echo "============================================"
+          echo "============================================================"
           echo "RAINFALL OUTPUT"
-          echo "============================================"
+          echo "============================================================"
 
           FILE="data/v2/processed/OKI_fire_events_rainfall.csv"
 
@@ -138,29 +193,39 @@ jobs:
           git check-ignore -v "$FILE" || true
 
       # ============================================================
-      # 9. FORCE ADD GENERATED DATA
+      # 10. FORCE ADD GENERATED DATA
       # ============================================================
       - name: Stage updated data
         run: |
-          echo "============================================"
+          echo "============================================================"
           echo "STAGING UPDATED DATA"
-          echo "============================================"
+          echo "============================================================"
 
-          git add -f data/v2/processed/OKI_NASA_FIRMS_fire_events.csv
-          git add -f data/v2/processed/OKI_NASA_FIRMS_spatial_analysis.csv
-          git add -f data/v2/processed/OKI_fire_events_rainfall.csv
+          git add -f \
+            data/v2/processed/OKI_NASA_FIRMS_fire_events.csv
+
+          git add -f \
+            data/v2/processed/OKI_NASA_FIRMS_spatial_analysis.csv
+
+          git add -f \
+            data/v2/processed/OKI_fire_events_rainfall.csv
 
           echo ""
           echo "Staged changes:"
           git status --short
 
       # ============================================================
-      # 10. COMMIT UPDATED DATA
+      # 11. COMMIT UPDATED DATA
       # ============================================================
       - name: Commit updated data
         run: |
+          echo "============================================================"
+          echo "COMMITTING UPDATED DATA"
+          echo "============================================================"
+
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.email \
+            "41898282+github-actions[bot]@users.noreply.github.com"
 
           if git diff --cached --quiet; then
             echo "No data changes."
@@ -170,20 +235,24 @@ jobs:
           fi
 
       # ============================================================
-      # 11. PUSH TO GITHUB
+      # 12. PUSH TO GITHUB
       # ============================================================
       - name: Push updated data
         run: |
+          echo "============================================================"
+          echo "PUSHING UPDATED DATA"
+          echo "============================================================"
+
           git push origin HEAD:${GITHUB_REF_NAME}
 
       # ============================================================
-      # 12. FINAL CHECK
+      # 13. FINAL CHECK
       # ============================================================
       - name: Final status
         run: |
-          echo "============================================"
+          echo "============================================================"
           echo "PIPELINE COMPLETED"
-          echo "============================================"
+          echo "============================================================"
 
           echo ""
           echo "Repository:"
@@ -196,3 +265,8 @@ jobs:
           echo ""
           echo "Generated files:"
           ls -lh data/v2/processed/
+
+          echo ""
+          echo "============================================================"
+          echo "FIRE MONITORING PIPELINE FINISHED"
+          echo "============================================================"
