@@ -3,8 +3,8 @@ name: Fire Monitoring Pipeline
 on:
   workflow_dispatch:
   schedule:
-    # Run every day at 01:00 UTC = 08:00 WIB
-    - cron: "0 1 * * *"
+    # Run every 3 hours
+    - cron: "0 */3 * * *"
 
 permissions:
   contents: write
