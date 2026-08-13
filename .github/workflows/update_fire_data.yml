@@ -65,7 +65,7 @@ jobs:
       # ============================================================
       - name: Run pipeline
         env:
-          MAP_KEY: ${{ secrets.MAP_KEY }}
+          FIRMS_MAP_KEY: ${{ secrets.MAP_KEY }}
         run: |
           python scripts/run_pipeline_v2.py
 
