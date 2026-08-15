@@ -1,16 +1,17 @@
 import os
-import time
 import requests
 import pandas as pd
 import geopandas as gpd
 import numpy as np
 
 from pathlib import Path
+from datetime import date, timedelta
+from io import StringIO
 from sklearn.cluster import DBSCAN
 
 
 # ============================================================
-# CONFIG — CUKUP UBAH BAGIAN INI
+# CONFIG
 # ============================================================
 
 MAP_KEY = os.environ["FIRMS_MAP_KEY"]
@@ -19,13 +20,13 @@ AREA_NAME = "OKI"
 
 BOUNDARY_FILE = "boundaries/OKI/OKI.shp"
 
-from datetime import date, timedelta
+# Rolling window:
+# Today + previous 4 days = 5 days total
+END_DATE_OBJ = date.today()
+START_DATE_OBJ = END_DATE_OBJ - timedelta(days=4)
 
-END_DATE = date.today()
-START_DATE = END_DATE - timedelta(days=4)
-
-END_DATE = END_DATE.strftime("%Y-%m-%d")
-START_DATE = START_DATE.strftime("%Y-%m-%d")
+END_DATE = END_DATE_OBJ.strftime("%Y-%m-%d")
+START_DATE = START_DATE_OBJ.strftime("%Y-%m-%d")
 
 SENSORS = [
     "MODIS_NRT",
@@ -34,6 +35,7 @@ SENSORS = [
     "VIIRS_NOAA21_NRT"
 ]
 
+# Spatial clustering radius
 CLUSTER_DISTANCE_KM = 2.0
 
 
@@ -47,8 +49,15 @@ RAW_DIR = BASE_DIR / "data" / "v2" / "raw"
 
 PROCESSED_DIR = BASE_DIR / "data" / "v2" / "processed"
 
-RAW_DIR.mkdir(parents=True, exist_ok=True)
-PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+RAW_DIR.mkdir(
+    parents=True,
+    exist_ok=True
+)
+
+PROCESSED_DIR.mkdir(
+    parents=True,
+    exist_ok=True
+)
 
 
 # ============================================================
@@ -75,7 +84,9 @@ boundary = gpd.read_file(
     BASE_DIR / BOUNDARY_FILE
 )
 
-boundary = boundary.to_crs("EPSG:4326")
+boundary = boundary.to_crs(
+    "EPSG:4326"
+)
 
 print("CRS:", boundary.crs)
 print("Records:", len(boundary))
@@ -93,10 +104,15 @@ east = maxx
 north = maxy
 
 print("\nNASA FIRMS AREA")
+
 print("West :", west)
 print("South:", south)
 print("East :", east)
 print("North:", north)
+
+print("\nDATE WINDOW")
+print("Start :", START_DATE)
+print("End   :", END_DATE)
 
 
 # ============================================================
@@ -143,13 +159,11 @@ for sensor in SENSORS:
 
             print(
                 "Download failed:",
-                response.text[:300]
+                response.text[:500]
             )
 
             continue
 
-
-        from io import StringIO
 
         df = pd.read_csv(
             StringIO(response.text)
@@ -158,24 +172,39 @@ for sensor in SENSORS:
 
         if df.empty:
 
-            print("Tidak ada hotspot.")
+            print(
+                "Tidak ada hotspot."
+            )
 
             continue
 
 
+        # ----------------------------------------------------
+        # SENSOR IDENTIFIER
+        # ----------------------------------------------------
+
         df["sensor"] = sensor
 
+
+        # ----------------------------------------------------
+        # DATE NORMALIZATION
+        # ----------------------------------------------------
+
         df["acq_date"] = pd.to_datetime(
-            df["acq_date"]
+            df["acq_date"],
+            errors="coerce"
         ).dt.strftime("%Y-%m-%d")
 
 
-        # Filter exact date range
+        # ----------------------------------------------------
+        # EXACT ROLLING DATE FILTER
+        # ----------------------------------------------------
+
         df = df[
             (df["acq_date"] >= START_DATE)
             &
             (df["acq_date"] <= END_DATE)
-        ]
+        ].copy()
 
 
         print(
@@ -183,6 +212,14 @@ for sensor in SENSORS:
             len(df)
         )
 
+
+        if df.empty:
+            continue
+
+
+        # ----------------------------------------------------
+        # SAVE SENSOR RAW DATA
+        # ----------------------------------------------------
 
         output_file = (
             RAW_DIR
@@ -199,14 +236,17 @@ for sensor in SENSORS:
             output_file
         )
 
-        all_data.append(df)
+
+        all_data.append(
+            df
+        )
 
 
     except Exception as e:
 
         print(
             "ERROR:",
-            e
+            repr(e)
         )
 
 
@@ -248,9 +288,15 @@ print(
 print("\nHotspot per date:")
 
 print(
-    firms["acq_date"].value_counts().sort_index()
+    firms["acq_date"]
+    .value_counts()
+    .sort_index()
 )
 
+
+# ============================================================
+# SAVE COMBINED RAW DATA
+# ============================================================
 
 raw_combined = (
     RAW_DIR
@@ -265,7 +311,7 @@ firms.to_csv(
 
 
 print(
-    "\nOutput:",
+    "\nRaw output:",
     raw_combined
 )
 
@@ -292,7 +338,10 @@ points = gpd.GeoDataFrame(
 )
 
 
-# Spatial join
+# ============================================================
+# SPATIAL JOIN
+# ============================================================
+
 points["INSIDE_AREA"] = "NO"
 
 
@@ -305,7 +354,9 @@ joined = gpd.sjoin(
 
 
 points.loc[
-    joined.index[joined.index_right.notna()],
+    joined.index[
+        joined.index_right.notna()
+    ],
     "INSIDE_AREA"
 ] = "YES"
 
@@ -316,15 +367,26 @@ points.loc[
 
 points["DISTANCE_BOUNDARY_KM"] = np.nan
 
-outside_mask = points["INSIDE_AREA"] == "NO"
+outside_mask = (
+    points["INSIDE_AREA"] == "NO"
+)
+
 
 if outside_mask.any():
 
-    points_metric = points.to_crs("EPSG:3857")
+    points_metric = points.to_crs(
+        "EPSG:3857"
+    )
 
-    boundary_metric = boundary.to_crs("EPSG:3857")
+    boundary_metric = boundary.to_crs(
+        "EPSG:3857"
+    )
 
-    boundary_line = boundary_metric.boundary.union_all()
+    boundary_line = (
+        boundary_metric
+        .boundary
+        .union_all()
+    )
 
     points.loc[
         outside_mask,
@@ -337,6 +399,8 @@ if outside_mask.any():
         .distance(boundary_line)
         / 1000
     ).round(3)
+
+
 # ============================================================
 # PRIORITY PER DETECTION
 # ============================================================
@@ -344,37 +408,45 @@ if outside_mask.any():
 points["PRIORITY"] = "MONITORING"
 
 
+# HIGH
 points.loc[
     (
         (points["INSIDE_AREA"] == "YES")
         &
         (
-            points["frp"].fillna(0) >= 10
+            points["frp"]
+            .fillna(0)
+            >= 10
         )
     ),
     "PRIORITY"
 ] = "HIGH"
 
 
+# LOW
 points.loc[
     (
         (points["INSIDE_AREA"] == "YES")
         &
         (
-            points["frp"].fillna(0) < 10
+            points["frp"]
+            .fillna(0)
+            < 10
         )
     ),
     "PRIORITY"
 ] = "LOW"
 
 
-# Outside but close to boundary
+# OUTSIDE BUT CLOSE TO BOUNDARY
 points.loc[
     (
         (points["INSIDE_AREA"] == "NO")
         &
         (
-            points["DISTANCE_BOUNDARY_KM"] <= 5
+            points[
+                "DISTANCE_BOUNDARY_KM"
+            ] <= 5
         )
     ),
     "PRIORITY"
@@ -400,7 +472,7 @@ points.drop(
 
 
 print(
-    "Spatial output:",
+    "\nSpatial output:",
     spatial_output
 )
 
@@ -408,7 +480,19 @@ print(
 print("\nInside / Outside:")
 
 print(
-    points["INSIDE_AREA"].value_counts()
+    points["INSIDE_AREA"]
+    .value_counts()
+)
+
+
+print("\nInside per date:")
+
+print(
+    points[
+        points["INSIDE_AREA"] == "YES"
+    ]["acq_date"]
+    .value_counts()
+    .sort_index()
 )
 
 
@@ -432,27 +516,54 @@ print(
 )
 
 
+# ============================================================
+# CREATE EMPTY EVENT FILE FIRST
+# ============================================================
+
+event_output = (
+    PROCESSED_DIR
+    / f"{AREA_NAME}_NASA_FIRMS_fire_events.csv"
+)
+
+
 if len(inside) == 0:
 
     print(
         "Tidak ada fire detection di dalam boundary."
     )
 
-else:
+    empty_events = pd.DataFrame(
+        columns=[
+            "FIRE_EVENT_ID",
+            "EVENT_DATE",
+            "LATITUDE",
+            "LONGITUDE",
+            "DETECTION_COUNT",
+            "DETECTED_BY",
+            "MAX_FRP_MW",
+            "PRIORITY"
+        ]
+    )
 
-    # --------------------------------------------------------
-    # DBSCAN
-    # --------------------------------------------------------
-
-    coords = np.radians(
-        inside[
-            ["latitude", "longitude"]
-        ].values
+    empty_events.to_csv(
+        event_output,
+        index=False
     )
 
 
-    earth_radius_km = 6371.0088
+else:
 
+    # ========================================================
+    # DBSCAN — SPATIAL CLUSTERING PER DAY
+    #
+    # IMPORTANT:
+    # We DO NOT cluster different dates together.
+    #
+    # This prevents older dates from absorbing
+    # today's detections into the same fire event.
+    # ========================================================
+
+    earth_radius_km = 6371.0088
 
     epsilon = (
         CLUSTER_DISTANCE_KM
@@ -460,21 +571,93 @@ else:
     )
 
 
-    clustering = DBSCAN(
-        eps=epsilon,
-        min_samples=1,
-        metric="haversine"
-    ).fit(coords)
+    inside["CLUSTER"] = -1
 
-
-    inside["CLUSTER"] = (
-        clustering.labels_
-    )
+    cluster_counter = 0
 
 
     # --------------------------------------------------------
+    # CLUSTER EACH DATE SEPARATELY
+    # --------------------------------------------------------
+
+    for event_date, daily_group in inside.groupby(
+        "acq_date",
+        sort=True
+    ):
+
+        print(
+            f"\nClustering date: {event_date}"
+        )
+
+        print(
+            "Detections:",
+            len(daily_group)
+        )
+
+
+        daily_indices = (
+            daily_group.index
+        )
+
+
+        coords = np.radians(
+            daily_group[
+                [
+                    "latitude",
+                    "longitude"
+                ]
+            ].values
+        )
+
+
+        clustering = DBSCAN(
+            eps=epsilon,
+            min_samples=1,
+            metric="haversine"
+        ).fit(coords)
+
+
+        labels = clustering.labels_
+
+
+        daily_clusters = (
+            len(
+                np.unique(labels)
+            )
+        )
+
+
+        print(
+            "Daily clusters:",
+            daily_clusters
+        )
+
+
+        # ----------------------------------------------------
+        # MAKE GLOBAL CLUSTER IDs
+        # ----------------------------------------------------
+
+        for original_label in np.unique(
+            labels
+        ):
+
+            mask = (
+                labels == original_label
+            )
+
+
+            inside.loc[
+                daily_indices[mask],
+                "CLUSTER"
+            ] = cluster_counter
+
+
+            cluster_counter += 1
+
+
+    # ========================================================
     # BUILD FIRE EVENTS
-    # --------------------------------------------------------
+    # ========================================================
 
     events = []
 
@@ -485,7 +668,9 @@ else:
 
         detected_by = ", ".join(
             sorted(
-                group["sensor"]
+                group[
+                    "sensor"
+                ]
                 .dropna()
                 .unique()
             )
@@ -504,15 +689,29 @@ else:
         )
 
 
-        lat = group["latitude"].mean()
+        lat = (
+            group["latitude"]
+            .mean()
+        )
 
-        lon = group["longitude"].mean()
 
-        date = group["acq_date"].mode()[0]
+        lon = (
+            group["longitude"]
+            .mean()
+        )
+
+
+        # Since clustering is now performed
+        # per date, mode is safe here.
+        event_date = (
+            group["acq_date"]
+            .mode()
+            .iloc[0]
+        )
 
 
         # ----------------------------------------------------
-        # EVENT PRIORITY
+        # SENSOR COUNT
         # ----------------------------------------------------
 
         sensor_count = (
@@ -520,6 +719,10 @@ else:
             .nunique()
         )
 
+
+        # ----------------------------------------------------
+        # EVENT PRIORITY
+        # ----------------------------------------------------
 
         if (
             detection_count >= 10
@@ -529,6 +732,7 @@ else:
 
             priority = "HIGH"
 
+
         elif (
             detection_count >= 3
             or sensor_count >= 2
@@ -537,44 +741,81 @@ else:
 
             priority = "MONITORING"
 
+
         else:
 
             priority = "LOW"
 
 
         events.append({
-    "EVENT_DATE": date,
-    "LATITUDE": round(lat, 6),
-    "LONGITUDE": round(lon, 6),
-    "DETECTION_COUNT": detection_count,
-    "DETECTED_BY": detected_by,
-    "MAX_FRP_MW": round(max_frp, 2),
-    "PRIORITY": priority
-})
 
+            "EVENT_DATE":
+                event_date,
+
+            "LATITUDE":
+                round(
+                    lat,
+                    6
+                ),
+
+            "LONGITUDE":
+                round(
+                    lon,
+                    6
+                ),
+
+            "DETECTION_COUNT":
+                detection_count,
+
+            "DETECTED_BY":
+                detected_by,
+
+            "MAX_FRP_MW":
+                round(
+                    max_frp,
+                    2
+                ),
+
+            "PRIORITY":
+                priority
+
+        })
+
+
+    # ========================================================
+    # EVENTS DATAFRAME
+    # ========================================================
 
     events_df = pd.DataFrame(
         events
     )
 
 
-    # --------------------------------------------------------
-    # EVENT ID
-    # --------------------------------------------------------
+    # ========================================================
+    # SORT
+    # ========================================================
 
-    events_df = events_df.sort_values(
-        [
-            "EVENT_DATE",
-            "DETECTION_COUNT"
-        ],
-        ascending=[
-            True,
-            False
-        ]
-    ).reset_index(
-        drop=True
+    events_df = (
+        events_df
+        .sort_values(
+            [
+                "EVENT_DATE",
+                "DETECTION_COUNT"
+            ],
+            ascending=[
+                True,
+                False
+            ]
+        )
+        .reset_index(
+            drop=True
+        )
     )
 
+
+    # ========================================================
+    # EVENT ID
+    # ========================================================
 
     events_df.insert(
         0,
@@ -589,15 +830,9 @@ else:
     )
 
 
-    # --------------------------------------------------------
-    # OUTPUT
-    # --------------------------------------------------------
-
-    event_output = (
-        PROCESSED_DIR
-        / f"{AREA_NAME}_NASA_FIRMS_fire_events.csv"
-    )
-
+    # ========================================================
+    # SAVE EVENTS
+    # ========================================================
 
     events_df.to_csv(
         event_output,
@@ -611,22 +846,37 @@ else:
     )
 
 
+    print("\nEvents per date:")
+
+    print(
+        events_df[
+            "EVENT_DATE"
+        ]
+        .value_counts()
+        .sort_index()
+    )
+
+
     print("\nPriority:")
 
     print(
         events_df[
             "PRIORITY"
-        ].value_counts()
+        ]
+        .value_counts()
     )
 
 
     print("\nTop 10:")
 
     print(
-        events_df.sort_values(
+        events_df
+        .sort_values(
             "DETECTION_COUNT",
             ascending=False
-        ).head(10).to_string(
+        )
+        .head(10)
+        .to_string(
             index=False
         )
     )
@@ -643,6 +893,7 @@ else:
 # ============================================================
 
 print("\n")
+
 print("=" * 60)
 print("PIPELINE V2 COMPLETE")
 print("=" * 60)
@@ -665,6 +916,11 @@ print(
 )
 
 print(
+    "Inside detections:",
+    len(inside)
+)
+
+print(
     "Raw output:",
     raw_combined
 )
@@ -674,11 +930,9 @@ print(
     spatial_output
 )
 
-if len(inside) > 0:
-
-    print(
-        "Fire event output:",
-        event_output
-    )
+print(
+    "Fire event output:",
+    event_output
+)
 
 print("=" * 60)
