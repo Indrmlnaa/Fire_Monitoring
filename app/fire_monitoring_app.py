@@ -22,7 +22,7 @@ st.set_page_config(
 # BASE DIRECTORY
 # ============================================================
 
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 PROCESSED_DIR = (
     BASE_DIR
