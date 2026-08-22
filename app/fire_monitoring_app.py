@@ -85,15 +85,12 @@ AREA_CONFIG = {
             PROCESSED_DIR
             / "Teluk_Bintuni_fire_events_rainfall.csv",
 
-        "boundary_type": "indonesia",
+        "boundary_type": "file",
 
-        "boundary_folder":
+        "boundary_file":
             BOUNDARIES_DIR
-            / "Indonesia",
-
-        "boundary_column": "WADMKK",
-
-        "boundary_value": "Teluk Bintuni",
+            / "Teluk_Bintuni"
+            / "Teluk_Bintuni.shp",
     },
 }
 
