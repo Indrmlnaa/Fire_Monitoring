@@ -3,7 +3,7 @@ name: Fire Monitoring Pipeline
 on:
   workflow_dispatch:
   schedule:
-    # Run every 3 hours
+    # Run every 1 hour
     - cron: "0 * * * *"
 
 permissions:
@@ -124,7 +124,7 @@ jobs:
           ls -lh data/v2/processed/
 
           echo ""
-          echo "Fire events:"
+          echo "OKI Fire events:"
 
           test -f \
             data/v2/processed/OKI_NASA_FIRMS_fire_events.csv
@@ -133,13 +133,31 @@ jobs:
             data/v2/processed/OKI_NASA_FIRMS_fire_events.csv
 
           echo ""
-          echo "Spatial analysis:"
+          echo "OKI Spatial analysis:"
 
           test -f \
             data/v2/processed/OKI_NASA_FIRMS_spatial_analysis.csv
 
           wc -l \
             data/v2/processed/OKI_NASA_FIRMS_spatial_analysis.csv
+
+          echo ""
+          echo "Teluk Bintuni Fire events:"
+
+          test -f \
+            data/v2/processed/Teluk_Bintuni_NASA_FIRMS_fire_events.csv
+
+          wc -l \
+            data/v2/processed/Teluk_Bintuni_NASA_FIRMS_fire_events.csv
+
+          echo ""
+          echo "Teluk Bintuni Spatial analysis:"
+
+          test -f \
+            data/v2/processed/Teluk_Bintuni_NASA_FIRMS_spatial_analysis.csv
+
+          wc -l \
+            data/v2/processed/Teluk_Bintuni_NASA_FIRMS_spatial_analysis.csv
 
       # ============================================================
       # 8. ADD RAINFALL TO FIRE EVENTS
@@ -201,6 +219,7 @@ jobs:
           echo "STAGING UPDATED DATA"
           echo "============================================================"
 
+          # OKI
           git add -f \
             data/v2/processed/OKI_NASA_FIRMS_fire_events.csv
 
@@ -209,6 +228,13 @@ jobs:
 
           git add -f \
             data/v2/processed/OKI_fire_events_rainfall.csv
+
+          # TELUK BINTUNI
+          git add -f \
+            data/v2/processed/Teluk_Bintuni_NASA_FIRMS_fire_events.csv
+
+          git add -f \
+            data/v2/processed/Teluk_Bintuni_NASA_FIRMS_spatial_analysis.csv
 
           echo ""
           echo "Staged changes:"
@@ -265,6 +291,17 @@ jobs:
           echo ""
           echo "Generated files:"
           ls -lh data/v2/processed/
+
+          echo ""
+          echo "Expected Teluk Bintuni files:"
+          test -f \
+            data/v2/processed/Teluk_Bintuni_NASA_FIRMS_fire_events.csv
+
+          test -f \
+            data/v2/processed/Teluk_Bintuni_NASA_FIRMS_spatial_analysis.csv
+
+          echo ""
+          echo "Teluk Bintuni files verified."
 
           echo ""
           echo "============================================================"
