@@ -30,10 +30,8 @@ AREAS = [
 
     {
         "name": "Teluk_Bintuni",
-        "boundary_file": "boundaries/Indonesia",
-        "use_indonesia_boundary": True,
-        "boundary_column": "WADMKK",
-        "boundary_value": "Teluk Bintuni"
+        "boundary_file": "boundaries/Teluk_Bintuni/Teluk_Bintuni.shp",
+        "use_indonesia_boundary": False
     }
 ]
 
