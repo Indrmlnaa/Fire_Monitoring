@@ -1,2 +1,4 @@
-latitude,longitude,bright_ti4,scan,track,acq_date,acq_time,satellite,instrument,confidence,version,bright_ti5,frp,daynight,sensor,INSIDE_AREA,DISTANCE_BOUNDARY_KM,PRIORITY
--2.43833,133.13362,332.74,0.39,0.36,2026-11-23,429,N21,VIIRS,n,2.0NRT,291.57,4.14,D,VIIRS_NOAA21_NRT,YES,,LOW
+latitude,longitude,brightness,scan,track,acq_date,acq_time,satellite,instrument,confidence,version,bright_t31,frp,daynight,sensor,bright_ti4,bright_ti5,INSIDE_AREA,DISTANCE_BOUNDARY_KM,PRIORITY
+-2.4411,133.13942,313.18,1.85,1.33,2026-11-24,720,Aqua,MODIS,43,6.1NRT,296.54,16.19,D,MODIS_NRT,,,YES,,HIGH
+-2.4388,133.14014,,0.52,0.5,2026-11-24,508,N20,VIIRS,n,2.0NRT,,3.04,D,VIIRS_NOAA20_NRT,334.31,297.38,YES,,LOW
+-2.43833,133.13362,,0.39,0.36,2026-11-23,429,N21,VIIRS,n,2.0NRT,,4.14,D,VIIRS_NOAA21_NRT,332.74,291.57,YES,,LOW
